@@ -32,13 +32,13 @@ flattenToDFA (PowerSetDFA start accepts ts) =
     where
         newLabelings :: [MultiState] -> Int -> DefaultMap MultiState State -> DefaultMap MultiState State
         newLabelings [] _ labelings     = labelings
-        newLabelings (l:ls) n labelings = newLabelings ls (n+1) (DMap.insert l (const n) labelings)
+        newLabelings (l:ls) n labelings = newLabelings ls (n+1) (DMap.add l n labelings)
         updateKey :: MultiState -> DefaultMap MultiState State -> DFATransitions -> DFATransitions
         updateKey key labeling accu =
             -- compute the new values
             let newValues = Map.map (\ms -> DMap.lookup ms labeling) (DMap.lookup key ts) in 
             -- insert newValues into accu at newLabel
-            DMap.insert (DMap.lookup key labeling) (const newValues) accu -- compute the new keys
+            DMap.add (DMap.lookup key labeling) newValues accu -- compute the new keys
 
             where
                 updateAllValues :: Map Char MultiState -> DefaultMap MultiState State -> Map Char State
@@ -79,7 +79,7 @@ fromNFAMulti' dtype@(nfa@(NFA start _ ts),epsClosure) currentState = do
     let reachableStatesWithClosure = Map.map (\multiState -> getMSClosure (epsClosure, multiState)) reachableStates 
 
     -- Mark all the computed multistates as reachable for the current state by putting them into `transitions`
-    S.modify(\s -> s{transitions = DMap.insert currentState (const reachableStatesWithClosure) (transitions s)})
+    S.modify(\s -> s{transitions = DMap.add currentState reachableStatesWithClosure (transitions s)})
 
     -- If an accepting state is part of the `currentState`, put `currentstate` into env
     when (hasAcceptState (nfa, currentState)) $ S.modify (\s-> s{ acceptingStates = currentState : acceptingStates s } )

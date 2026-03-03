@@ -5,19 +5,108 @@
 
 module Main where
 
-import Parser      (parseReg)
+import Parser      (parseReg,Regex(..))
 import Regex       (match)
 import Debug.Trace (trace)
 
+import Test.QuickCheck
+-- import Text.RE
+
+{-
+Idea:
+
+1. Generate a random AST of our Tokens
+  Positive Testing: 
+    - From the AST, generate a String that definitely matches this AST
+  Naive testing (will result mostly in negative testing):
+    - From this AST, construct a Haskell-style regular expression and see if our algorithm and
+      the Haskell-implementation result in the same 'match'-output
+    - generate a random String and run both on it
+-}
+
+genAST :: Gen Regex
+genAST = frequency [(24, sized helper), (1,return Epsilon)]
+  where 
+    helper :: Int -> Gen Regex
+    helper 0 = genLiteral
+    helper n = frequency [
+              (4, genOr n)
+            , (4, genConcat n)
+            , (1, genLiteral)
+            , (2, genPlus n)
+            , (2, genKleene n)
+            , (2, genOptional n)
+          ]
+
+    genLiteral :: Gen Regex
+    genLiteral = Literal <$> elements ['a'..'z']
+
+    genPlus :: Int -> Gen Regex
+    genPlus k = let k' = k - 1 in do
+      a <- helper k'
+      return $ Plus a
+
+    genKleene :: Int -> Gen Regex
+    genKleene k = let k' = k - 1 in do
+      a <- helper k'
+      return $ Kleene a
+
+    genOptional :: Int -> Gen Regex
+    genOptional k = let k' = k - 1 in do
+      a <- helper k'
+      return $ Optional a
+
+    genConcat :: Int -> Gen Regex
+    genConcat k =  let k' = k `div` 2 in do
+      a <- helper k'
+      b <- helper k'
+      return (Concat a b)
+
+    genOr :: Int -> Gen Regex
+    genOr k =  let k' = k `div` 2 in do
+      a <- helper k'
+      b <- helper k'
+      return (Or a b)
+
+createRegex :: Regex -> String
+createRegex Epsilon      = ""
+createRegex Dot          = "."
+createRegex (Literal c)  = [c]
+createRegex (Plus r)     = "(" createRegex r ++ ")+"
+createRegex (Kleene r)   = "(" createRegex r ++ ")*"
+createRegex (Optional r) = "(" createRegex r ++ ")?"
+createRegex (Concat a b) = createRegex  ++ createRegex b
+createRegex (Or a b)     = "(" createRegex a ++ "|" ++ createRegex b ")"
+
+-- TODO: use QuickCheck to randomly populate constructors instead of using
+-- minimal implementations.
+createMatch :: Regex -> String
+createMatch Epsilon      = ""
+createMatch Dot          = "a"
+createMatch (Literal c)  = [c]
+createMatch (Plus r)     = createMatch r -- minimal r+
+createMatch (Kleene r)   = ""            -- minimal r*
+createMatch (Optional r) = ""            -- minimal r?
+createMatch (Concat a b) = createRegex ++ createRegex b
+createMatch (Or a _)     = createRegex a -- bias on `a`
+
+prop_rgx :: Regex -> Bool
+prop_rgx r = let 
+  haskellRegex = createRegex r
+  perfectMatch = createMatch r
+  in
+    undefined -- TODO: test that Haskell + our Matcher match 
+
 main :: IO ()
 main = do
-  mapM_ (\res -> putStrLn $ show res ++ "\n" ++ sep) tests
-  where tests = [ testParser testSuiteParser       -- variety of regs
-                , testParser matchingRegs          -- verify regs first
-                , testMatching testSuiteMatching ] -- same regs as^ with match tests
-        sep   = [ '=' | _ <- [1..80]] 
+  sample genAST
+  -- mapM_ (\res -> putStrLn $ show res ++ "\n" ++ sep) tests
+  -- where tests = [ testParser testSuiteParser       -- variety of regs
+  --               , testParser matchingRegs          -- verify regs first
+  --               , testMatching testSuiteMatching ] -- same regs as^ with match tests
+  --       sep   = [ '=' | _ <- [1..80]] 
 
-        matchingRegs = map (\(reg,_,_) -> reg) testSuiteMatching
+  --       matchingRegs = map (\(reg,_,_) -> reg) testSuiteMatching
 
 testParser :: [String] -> Bool
 testParser ps = process ps 1 True

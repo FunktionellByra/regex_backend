@@ -6,7 +6,7 @@ license:             GPL-3.0-or-later
 author:              Michal Spano, Philipp-Immanuel Holst
 build-type:          Simple
 
-library regexp-lib
+library
   exposed-modules: Datatypes
                  , DMap
                  , NFA
@@ -29,7 +29,7 @@ executable regexp
   build-depends: base >=4.14 && <5
                , containers
                , mtl
-               , regexp-lib
+               , regexp
 
   default-language:  Haskell2010
 
@@ -40,6 +40,8 @@ executable regexp-test
   build-depends: base >=4.14 && <5
                , containers
                , mtl
-               , regexp-lib
+               , regexp
+               , regex
+               , QuickCheck
 
   default-language:  Haskell2010

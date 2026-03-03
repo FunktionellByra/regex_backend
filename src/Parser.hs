@@ -1,5 +1,5 @@
 module Parser
-    ( Regex(..) -- * Datatype for Regex
+    ( Regex(..) -- * Datatype for Regex tokens
     , pp        -- * @Regex@ pretty print
     , parseReg
     , parseReg1
@@ -13,10 +13,13 @@ import Data.Char (isAlphaNum)
 
 data Regex
     = Epsilon
-    | Literal Char
-    | Kleene Regex
-    | Concat Regex Regex
     | Dot
+    | Literal  Char
+    | Plus     Regex
+    | Kleene   Regex
+    | Optional Regex
+    | Concat Regex Regex
+    | Or     Regex Regex
     deriving (Eq, Show)
 
 pp :: Regex -> String 

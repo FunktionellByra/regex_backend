@@ -35,6 +35,7 @@ eps :: Char
 eps = '\949'
 
 -- Construction of Epsilon-NFA
+-- TODO: is this wrong?
 constructNFA :: Regex -> S.State Env (State, State)
 constructNFA Epsilon = do
     currentState <- getNextState
@@ -89,7 +90,7 @@ createEdge :: State -> State -> Char -> S.State Env ()
 createEdge origin target c =
     S.modify(\e ->
         e{ transitions = DMap.insert origin
-            (DMap.insert c (\nextStates -> target : nextStates) )
+            (DMap.insert c (target :) )
             (transitions e)
         })
 
@@ -103,11 +104,11 @@ getNextState = do
 -- Manually insert the accepting-state as the epsilon closure is reflexive and
 -- it would otherwise not be part of it since it has an outdegree of 0.
 emptyDFSState :: State -> (DefaultMap State [State], [State])
-emptyDFSState initial = (DMap.insert initial (const [initial]) (DMap.empty []), [])
+emptyDFSState initial = (DMap.add initial [initial] (DMap.empty []), [])
 
 -- | Compute the epsilon clojure of a given Epsilon-NFA
 epsilonClosure :: NFA -> EpsClosure
-epsilonClosure (NFA start end (outer,d)) = DMap.insert end (const [end]) (go adjacencyEpsList)
+epsilonClosure (NFA start end (outer,d)) = DMap.add end [end] (go adjacencyEpsList)
     where 
         adjacencyEpsList :: DefaultMap State [State]
         adjacencyEpsList = DMap.create (Map.fromList $ map (\(s,ts) -> (s, DMap.lookup eps ts)) (Map.toList outer)) []

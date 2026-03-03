@@ -1,5 +1,6 @@
 module DMap
     ( empty
+    , add
     , insert
     , lookup
     , toList
@@ -24,6 +25,11 @@ empty d = (Map.empty, d)
 create :: Map k v -> v -> DefaultMap k v
 create m v = (m, v)
 
+add :: Ord k => k -> v -> DefaultMap k v -> DefaultMap k v
+add k v = insert k (const v)
+
+-- @insert@ is a more general case of @add@ that allows to to modify the value with
+-- a function of type @v -> v@ when inserting
 insert :: Ord k => k -> (v -> v) -> DefaultMap k v -> DefaultMap k v
 insert k f (map, d) = case Map.lookup k map of
     Nothing    -> (Map.insert k (f d) map, d)
