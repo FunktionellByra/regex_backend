@@ -1,5 +1,7 @@
 *.dot
 *.swp
+*.png
+*.svg
 
 .ghc.environment.aarch64-darwin-9.6.7
 dist-newstyle/

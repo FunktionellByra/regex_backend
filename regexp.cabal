@@ -11,8 +11,7 @@ library
                  , DMap
                  , NFA
                  , DFA
-                 , Parser
-                 , Parsing
+                 , RDSL
                  , Regex
 
   hs-source-dirs:    src

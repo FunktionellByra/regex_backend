@@ -11,7 +11,7 @@ import qualified NFA (epsilonClosure, fromRegex)
 import Debug.Trace (trace)
 
 import qualified DMap
-import qualified Parser as P
+import qualified RDSL as P -- TODO
 import qualified Data.Map as Map
 import qualified Control.Monad.State as S
 
@@ -19,9 +19,10 @@ type RegPattern = String
 
 -- Match a (stringified) Regex against a string input
 match :: RegPattern -> String -> Bool
-match p s = case P.parseReg p of
-    Just reg -> match1 reg s
-    _        -> False
+match = undefined
+-- match p s = case P.parseReg p of
+--     Just reg -> match1 reg s
+--     _        -> False
 
 -- Match a Regex datatype against a string input
 match1 :: P.Regex -> String -> Bool

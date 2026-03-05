@@ -9,7 +9,7 @@ import DMap (DefaultMap)
 import Data.Map (Map)
 
 import Datatypes
-import Parser (Regex(..))
+import RDSL (Regex(..))
 
 import qualified Control.Monad.State as S
 
@@ -36,24 +36,19 @@ eps = '\949'
 
 -- Construction of Epsilon-NFA
 constructNFA :: Regex -> S.State Env (State, State)
--- TODO: is this wrong?
--- Clarification: Epsilon can not be composed, there can only be a singular Epsilon for which
--- this is correct
-constructNFA Epsilon = do
-    currentState <- getNextState
-    nextState <- getNextState
-    createEdge currentState nextState eps
-    return (currentState, nextState)
-
 constructNFA Dot = do
     currentState <- getNextState
-    nextState <- getNextState
+    nextState    <- getNextState
     createEdge currentState nextState '.'
     return (currentState, nextState)
 
+constructNFA (Literal '\0') = do
+    currentState <- getNextState
+    return (currentState, currentState)
+
 constructNFA (Literal l) = do
     currentState <- getNextState
-    nextState <- getNextState
+    nextState    <- getNextState
     createEdge currentState nextState l
     return (currentState, nextState)
 
@@ -116,6 +111,11 @@ constructNFA (Or l r ) = do
 
     return (currentState, endingState)
 
+constructNFA (Class cs) = do 
+    currentState <- getNextState
+    endingState  <- getNextState
+    mapM_ (createEdge currentState endingState) cs
+    return (currentState, endingState)
 
 createEdge :: State -> State -> Char -> S.State Env ()
 createEdge origin target c =
