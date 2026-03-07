@@ -133,7 +133,7 @@ prop_rgx_positive :: Regex -> Bool
 prop_rgx_positive r = let 
   haskellRegex = createRgx r
   perfectMatch = createMatch r
-  in trace (show r ++ "\n" ++ show haskellRegex) $ match1 r perfectMatch == fullMatch perfectMatch haskellRegex
+  in match1 r perfectMatch == fullMatch perfectMatch haskellRegex
 
 -- TODO: create more meaningful input strings => the input is meaningful even if its not human-readable
 prop_rgx_negativish :: Regex -> String -> Bool

@@ -3,6 +3,7 @@ module Regex
     , match1          -- * regex (datatype) on string input
     , check           -- * internal
     , checkWithTrace  -- * internal (trace for visuals)
+    , RegPattern      -- * alias for Stringified reg. patterns
     ) where
 
 import Datatypes
@@ -59,7 +60,7 @@ checkWithTrace dfa@(DFA start accepts ts) input =
             let isAccepting = current `elem` accepts
             -- The current state verifies the input, thus set the FoundFlag to True
             -- to avoid adding further trace
-            S.modify (\(_, trace) -> if isAccepting then (True,(current,True):trace) else (False,trace))
+            S.modify (\(_, trace) -> if isAccepting then (True,(current,True):trace) else (False,(current,False):trace))
             trace ("Accept states: " ++ show accepts) (return ())
             return isAccepting
         go current (c:cs) = do

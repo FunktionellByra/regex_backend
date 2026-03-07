@@ -3,106 +3,70 @@
 
 module Main where
 
+import Regex
 import Datatypes
 import RDSL
 import Web.Scotty
 import Data.Aeson
-import Data.Text.Lazy as TL (pack)
-import DMap   (toString)
-import DFA    (fromNFAMulti, flattenToDFA)
 import Network.Wai.Middleware.Cors
-import Network.HTTP.Types.Status
-import NFA    (epsilonClosure, fromRegex)
-import Debug.Trace (trace)
 
--- import System.IO (hSetBuffering, stdout, BufferMode(NoBuffering))
+import Data.Text.Lazy as TL (pack)
+import DMap                 (toString)
+import NFA                  (epsilonClosure,fromRegex)
+import DFA                  (fromNFAMulti,flattenToDFA)
+import Network.HTTP.Types   (hContentType)
 
-import qualified Regex
-
-data Request = Request
-    { regexp :: Maybe String
-    , input :: Maybe String }
+data Request = Request { regexp, input :: String }
 
 instance FromJSON Request where 
     parseJSON (Object v) = Request
-        <$> v .:? "regexp"
-        <*> v .:? "input"
+        <$> v .: "regexp"
+        <*> v .: "input"
     parseJSON _ = fail "Error parsing Request Object."
 
+type MatchStatus = Bool
+type ValidState  = Bool
+type Input       = String
+
+data Response = Response 
+    { graphviz :: String
+    , matched  :: MatchStatus
+    , trace    :: [(State,ValidState)] }
+
+instance ToJSON Response where
+    toJSON(Response{graphviz=g,matched=m,trace=t}) =
+        object ["graphviz" .= g, "matched" .= m, "trace" .= t]
+
+corsPolicy :: CorsResourcePolicy
+corsPolicy = CorsResourcePolicy
+    { corsOrigins        = Nothing
+    , corsMethods        = ["GET", "POST", "DELETE", "OPTIONS"]
+    , corsRequestHeaders = [hContentType, "Authorization", "X-Requested-With"]
+    , corsExposedHeaders = Nothing
+    , corsMaxAge         = Nothing
+    , corsVaryOrigin     = False
+    , corsRequireOrigin  = False
+    , corsIgnoreFailures = False }
 
 main :: IO ()
 main = do
-    scotty 8080 $ do 
-        middleware simpleCors
-
-        options (regex ".*") $ do
-            trace "in options" (return ())
-            status status200
-
-        get "/" $ do 
-            trace "in get /" (return ())
-            setHeader (TL.pack "Access-Control-Allow-Origin") (TL.pack "*")
-            setHeader (TL.pack "Access-Control-Allow-Methods") (TL.pack "DELETE, POST, GET, OPTIONS")
-            setHeader (TL.pack "Access-Control-Allow-Headers") (TL.pack "Content-Type, Authorization, X-Requested-With")
-
-            text "blabla"
-
-        post  "/" $ do 
-            trace "in post /" (return ())
-            Request{regexp=r, input=i} <- jsonData
-            -- processing..
-
-            setHeader (TL.pack "Access-Control-Allow-Origin") (TL.pack "*")
-            text $ TL.pack ((show r) ++ (show i))
-
-        notFound $ do 
-            trace "in not-found" (return ())
-            text "Page not found. "
-
-
-
-    {-
-    let reg   = url
-        input = "https://discord.com/channels/me/1435605061844860999"
-
-    let nfa         = fromRegex reg
-    let epsClosure  = epsilonClosure nfa
-    let powerSetDFA = fromNFAMulti nfa
-    let dfa         = flattenToDFA powerSetDFA
-
-    -- Save to files (locally)
-    -- writeFile "nfa.dot" $ show nfa
-    -- writeFile "powerSetDFA.dot" $ show powerSetDFA
-    -- writeFile "dfa.dot" $ show dfa
-
-    let (matched, trace) = Regex.checkWithTrace dfa input
-    print matched
-
-    -- case parseReg p of
-    --     Just reg -> do 
-    --         putStrLn $ "Token received: " ++ show reg
-
-    --         let nfa         = fromRegex reg
-    --         let epsClosure  = epsilonClosure nfa
-    --         let powerSetDFA = fromNFAMulti nfa
-    --         let dfa         = flattenToDFA powerSetDFA
-
-    --         -- Save to files (locally)
-    --         writeFile "nfa.dot" $ show nfa
-    --         writeFile "powerSetDFA.dot" $ show powerSetDFA
-    --         writeFile "dfa.dot" $ show dfa
-
-    --         putStr ">? "
-    --         input <- getLine
-    --         -- let matched = Regex.match1 reg input
-
-    --         -- Enables trace (experimental)
-    --         let (matched, trace) = Regex.checkWithTrace dfa input
-    --         putStrLn $ "Checking " ++ show input ++ " on " ++ show p ++
-    --                    " results in: " ++ show matched
-    --         putStrLn $ "The trace is: " ++ show trace
-    --     Nothing -> putStrLn "Failed to parse."
-    -- main -- continue
-
-
--}
+    scotty 8080 $ do
+        middleware $ cors (const $ Just corsPolicy)
+        get "/" $ text "Welcome to our Regex-Visualizer!"
+        post  "/" $ do
+            resp <- processRequest <$> jsonData
+            json resp
+        notFound $ text "404: Page not found."
+    
+processRequest :: Request -> Response
+processRequest (Request{regexp=trex, input=i}) =
+    let reg          = read trex -- TODO: add parsing state back.
+        nfa          = fromRegex reg
+        epsClosure   = epsilonClosure nfa
+        powerSetDFA  = fromNFAMulti nfa
+        dfa          = flattenToDFA powerSetDFA
+        (matched,tr) = Regex.checkWithTrace dfa i
+    in Response
+        { graphviz = show dfa
+        , matched  = matched
+        , trace    = tr }

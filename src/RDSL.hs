@@ -24,7 +24,7 @@ data Regex
     | Concat Regex Regex
     | Or     Regex Regex
     | Class  [Char]
-    deriving (Eq,Show)
+    deriving (Eq,Show,Read)
 
 pp :: Regex -> String
 pp Dot            = "."
@@ -35,6 +35,7 @@ pp (Kleene r)     = "(" ++ pp r ++ ")*"
 pp (Optional r)   = "(" ++ pp r ++ ")?"
 pp (Concat a b)   = pp a ++ pp b
 pp (Or a b)       = "(" ++ pp a ++ "|" ++ pp b ++ ")"
+pp (Class c)      = "[" ++ c ++ "]"
 
 -- | Primitive Operations
 eps,dot :: Regex

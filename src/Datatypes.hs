@@ -85,6 +85,7 @@ stringifyDFA :: DFA -> String
 stringifyDFA (DFA start ends ts) =
     unlines [ "digraph G{"
            , headers
+           , "//COLORS" -- stud to be replaced by dynamic trace (client)
            , staticBody
            , body, "}" ]
 
@@ -118,6 +119,7 @@ stringifyNFA :: NFA -> String
 stringifyNFA (NFA start end ts) =
     unlines [ "digraph G{"
             , headers
+            , "//COLORS" -- stud to be replaced by dynamic trace (client)
             , staticBody
             , body, "}" ]
 
