@@ -23,17 +23,16 @@ data Regex
     deriving (Eq,Show,Read)
 
 eps :: Regex
-eps = Literal '\0'
+eps = Literal '\0' -- 'empty char' (sort-of)
 
 parseRegex :: String -> Either ParseError Regex
-parseRegex ""    = return $ eps
+parseRegex ""    = return eps
 parseRegex input = parse regexParser "" input 
-
 
 regexParser :: Parser Regex
 regexParser = do
     rs <- many1 regexParserWithoutConcat
-    eof -- require the whole input to be consumed
+    -- eof -- require the whole input to be consumed TODO
     return $ foldl1 Concat rs
 
 regexParserWithoutConcat :: Parser Regex
@@ -41,8 +40,7 @@ regexParserWithoutConcat = buildExpressionParser table atom
 
 atom :: Parser Regex
 atom = dotParser <|> literalParser <|> classParser <|> parenAtom
-    where 
-        parenAtom = do 
+    where parenAtom = do 
             char '('
             r <- regexParser
             char ')'
@@ -52,7 +50,7 @@ dotParser :: Parser Regex
 dotParser = Literal <$> char '.'
 
 literalParser :: Parser Regex
-literalParser = Literal <$> letter
+literalParser = Literal <$> alphaNum
 
 classParser :: Parser Regex
 classParser = do
@@ -61,16 +59,12 @@ classParser = do
     char ']'
     return $ Class ls
 
-{-
-    Precedence levels for operators
--}
 table :: OperatorTable String () Identity Regex
 table =
   [ [ Postfix (char '*' >> return Kleene)
     , Postfix (char '+' >> return Plus)
     , Postfix (char '?' >> return Optional) ]
     , [Infix (char '|' >> return Or) AssocLeft ] ]
-
 
 -- * Utils
 
@@ -87,16 +81,15 @@ pp (Class c)      = "[" ++ c ++ "]"
 
 specialChrs :: String
 specialChrs =
-    [
-          '.'
-        , '*'
-        , '+'
-        , '*'
-        , '?'
-        , '('
-        , ')'
-        , '['
-        , ']'
-        , '\\'
-        , '^'
-        , '$' ]
+    [ '.'
+    , '*'
+    , '+'
+    , '*'
+    , '?'
+    , '('
+    , ')'
+    , '['
+    , ']'
+    , '\\'
+    , '^'
+    , '$' ]

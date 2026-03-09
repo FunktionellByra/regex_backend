@@ -15,7 +15,7 @@ import Data.Text.Lazy as TL (pack)
 import DMap                 (toString)
 import NFA                  (epsilonClosure,fromRegex)
 import DFA                  (fromNFAMulti,flattenToDFA)
-import Network.HTTP.Types   (hContentType, status400)
+import Network.HTTP.Types   (hContentType,status400)
 import qualified Debug.Trace as D
 
 data Request = Request { regexp :: String,input :: String }
@@ -52,7 +52,6 @@ corsPolicy = CorsResourcePolicy
 
 main :: IO ()
 main = do
-
     scotty 8080 $ do
         middleware $ cors (const $ Just corsPolicy)
         get "/" $ text "Welcome to our Regex-Visualizer!"
@@ -61,20 +60,17 @@ main = do
             processRequest req
         notFound $ text "404: Page not found."
     
-processRequest :: Request -> ActionM() -- Response
-processRequest (Request{regexp=trex, input=i}) = do
-    let parseResult          = parseRegex trex 
-
-    case parseResult of 
-        Right reg -> do
-            let 
-                nfa           = fromRegex reg
-                epsClosure    = epsilonClosure nfa
-                powerSetDFA   = fromNFAMulti nfa
-                dfa           = flattenToDFA powerSetDFA
-                (matched, tr) = checkWithTrace dfa i
-                res = Response{
-                    graphviz = show dfa
+processRequest :: Request -> ActionM () -- Response
+processRequest (Request{regexp=reg,input=i}) = do
+    case parseRegex reg of 
+        Right r -> do
+            let nfa          = fromRegex r
+                epsClosure   = epsilonClosure nfa
+                powerSetDFA  = fromNFAMulti nfa
+                dfa          = flattenToDFA powerSetDFA
+                (matched,tr) = checkWithTrace dfa i
+                res = Response
+                    { graphviz = show dfa
                     , matched  = matched
                     , trace    = tr }
             json res
