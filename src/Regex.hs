@@ -12,7 +12,7 @@ import qualified NFA (epsilonClosure, fromRegex)
 import Debug.Trace (trace)
 
 import qualified DMap
-import qualified RDSL as P -- TODO
+import qualified Parser as P -- TODO
 import qualified Data.Map as Map
 import qualified Control.Monad.State as S
 

@@ -4,8 +4,9 @@
 module Main where
 
 import Regex
+import Parser
 import Datatypes
-import RDSL
+import Parser
 import Web.Scotty
 import Data.Aeson
 import Network.Wai.Middleware.Cors
@@ -50,23 +51,31 @@ corsPolicy = CorsResourcePolicy
 
 main :: IO ()
 main = do
-    scotty 8080 $ do
-        middleware $ cors (const $ Just corsPolicy)
-        get "/" $ text "Welcome to our Regex-Visualizer!"
-        post  "/" $ do
-            resp <- processRequest <$> jsonData
-            json resp
-        notFound $ text "404: Page not found."
+    putStrLn ""
+    putStr ">>"
+    input <- getLine 
+    putStrLn $ show $ parseRegex input
+    main
+
+--     scotty 8080 $ do
+--         middleware $ cors (const $ Just corsPolicy)
+--         get "/" $ text "Welcome to our Regex-Visualizer!"
+--         post  "/" $ do
+--             resp <- processRequest <$> jsonData
+--             json resp
+--         notFound $ text "404: Page not found."
     
-processRequest :: Request -> Response
-processRequest (Request{regexp=trex, input=i}) =
-    let reg          = read trex -- TODO: add parsing state back.
-        nfa          = fromRegex reg
-        epsClosure   = epsilonClosure nfa
-        powerSetDFA  = fromNFAMulti nfa
-        dfa          = flattenToDFA powerSetDFA
-        (matched,tr) = Regex.checkWithTrace dfa i
-    in Response
-        { graphviz = show dfa
-        , matched  = matched
-        , trace    = tr }
+-- processRequest :: Request -> Response
+-- processRequest (Request{regexp=trex, input=i}) =
+--     -- let reg          = read trex -- TODO: add parsing state back.
+
+--     let reg          = parseRegex trex -- TODO: add parsing state back.
+--         nfa          = fromRegex reg
+--         epsClosure   = epsilonClosure nfa
+--         powerSetDFA  = fromNFAMulti nfa
+--         dfa          = flattenToDFA powerSetDFA
+--         (matched,tr) = Regex.checkWithTrace dfa i
+--     in Response
+--         { graphviz = show dfa
+--         , matched  = matched
+--         , trace    = tr }

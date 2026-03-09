@@ -9,7 +9,7 @@ import DMap (DefaultMap)
 import Data.Map (Map)
 
 import Datatypes
-import RDSL (Regex(..))
+import Parser (Regex(..))
 
 import qualified Control.Monad.State as S
 

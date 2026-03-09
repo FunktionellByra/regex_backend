@@ -2,7 +2,7 @@
 
 module Main where
 
-import RDSL            (Regex(..),eps)
+import Parser            (Regex(..),eps)
 import Regex           (match, match1)
 import Data.List       (nub,sort)
 import Text.Regex.TDFA ((=~))
