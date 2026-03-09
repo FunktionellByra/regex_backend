@@ -1,6 +1,7 @@
 module Parser
     ( Regex(..)
     , parseRegex
+    , eps
     ) where
 
 import Data.Functor.Identity
@@ -21,13 +22,18 @@ data Regex
     | Class  [Char]
     deriving (Eq,Show,Read)
 
+eps :: Regex
+eps = Literal '\0'
+
 parseRegex :: String -> Either ParseError Regex
-parseRegex ""    = return $ Literal '\0'
+parseRegex ""    = return $ eps
 parseRegex input = parse regexParser "" input 
+
 
 regexParser :: Parser Regex
 regexParser = do
     rs <- many1 regexParserWithoutConcat
+    eof -- require the whole input to be consumed
     return $ foldl1 Concat rs
 
 regexParserWithoutConcat :: Parser Regex

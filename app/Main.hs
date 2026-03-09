@@ -15,9 +15,10 @@ import Data.Text.Lazy as TL (pack)
 import DMap                 (toString)
 import NFA                  (epsilonClosure,fromRegex)
 import DFA                  (fromNFAMulti,flattenToDFA)
-import Network.HTTP.Types   (hContentType)
+import Network.HTTP.Types   (hContentType, status400)
+import qualified Debug.Trace as D
 
-data Request = Request { regexp, input :: String }
+data Request = Request { regexp :: String,input :: String }
 
 instance FromJSON Request where 
     parseJSON (Object v) = Request
@@ -51,31 +52,32 @@ corsPolicy = CorsResourcePolicy
 
 main :: IO ()
 main = do
-    putStrLn ""
-    putStr ">>"
-    input <- getLine 
-    putStrLn $ show $ parseRegex input
-    main
 
---     scotty 8080 $ do
---         middleware $ cors (const $ Just corsPolicy)
---         get "/" $ text "Welcome to our Regex-Visualizer!"
---         post  "/" $ do
---             resp <- processRequest <$> jsonData
---             json resp
---         notFound $ text "404: Page not found."
+    scotty 8080 $ do
+        middleware $ cors (const $ Just corsPolicy)
+        get "/" $ text "Welcome to our Regex-Visualizer!"
+        post  "/" $ do
+            req <- jsonData
+            processRequest req
+        notFound $ text "404: Page not found."
     
--- processRequest :: Request -> Response
--- processRequest (Request{regexp=trex, input=i}) =
---     -- let reg          = read trex -- TODO: add parsing state back.
+processRequest :: Request -> ActionM() -- Response
+processRequest (Request{regexp=trex, input=i}) = do
+    let parseResult          = parseRegex trex 
 
---     let reg          = parseRegex trex -- TODO: add parsing state back.
---         nfa          = fromRegex reg
---         epsClosure   = epsilonClosure nfa
---         powerSetDFA  = fromNFAMulti nfa
---         dfa          = flattenToDFA powerSetDFA
---         (matched,tr) = Regex.checkWithTrace dfa i
---     in Response
---         { graphviz = show dfa
---         , matched  = matched
---         , trace    = tr }
+    case parseResult of 
+        Right reg -> do
+            let 
+                nfa           = fromRegex reg
+                epsClosure    = epsilonClosure nfa
+                powerSetDFA   = fromNFAMulti nfa
+                dfa           = flattenToDFA powerSetDFA
+                (matched, tr) = checkWithTrace dfa i
+                res = Response{
+                    graphviz = show dfa
+                    , matched  = matched
+                    , trace    = tr }
+            json res
+        Left e -> do 
+            status status400
+            text $ TL.pack $ "Invalid pattern for regular expression: " ++ show e

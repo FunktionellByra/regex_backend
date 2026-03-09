@@ -10,6 +10,7 @@ import Datatypes
 import qualified DFA (fromNFAMulti, flattenToDFA, fromNFA)
 import qualified NFA (epsilonClosure, fromRegex)
 import Debug.Trace (trace)
+import Text.ParserCombinators.Parsec(ParseError)
 
 import qualified DMap
 import qualified Parser as P -- TODO
@@ -19,16 +20,20 @@ import qualified Control.Monad.State as S
 type RegPattern = String
 
 -- Match a (stringified) Regex against a string input
-match :: RegPattern -> String -> Bool
-match = undefined
--- match p s = case P.parseReg p of
---     Just reg -> match1 reg s
---     _        -> False
+match :: RegPattern -> String -> Either ParseError (Bool, [(State, Bool)])
+match p s = case P.parseRegex p of
+    Right reg -> Right $ match2 reg s
+    Left e -> Left e
 
 -- Match a Regex datatype against a string input
 match1 :: P.Regex -> String -> Bool
 match1 pattern input = let dfa = (DFA.fromNFA . NFA.fromRegex) pattern in 
     check dfa input
+
+-- Match a Regex datatype against a string input
+match2 :: P.Regex -> String -> (Bool, [(State, Bool)])
+match2 pattern input = let dfa = (DFA.fromNFA . NFA.fromRegex) pattern in 
+    checkWithTrace dfa input
 
 -- Match a Regex (as a DFA construct) against a string input
 -- Note: useful for internal testing; @match@ calls @check@.
