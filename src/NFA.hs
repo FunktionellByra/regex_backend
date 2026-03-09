@@ -57,7 +57,6 @@ constructNFA (Plus r) =
 
 constructNFA (Kleene exp) = do
     currentState <- getNextState
-    localFinalState <- getNextState
 
     -- create the inner automaton
     (innerStart, innerEnd) <- constructNFA exp
@@ -67,6 +66,10 @@ constructNFA (Kleene exp) = do
 
     -- connect innerEnd with inner start
     createEdge innerEnd innerStart eps
+
+    -- delay the creation of the final state to keep the
+    -- labeling in order
+    localFinalState <- getNextState
 
     -- connect innerEnd with localFinal
     createEdge innerEnd localFinalState eps

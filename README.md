@@ -2,10 +2,13 @@
 
 ## Synopsis
 
-- A regex **parser \& interpreter** for a minimal language (subset of `POSIX`):
+This project is a standalone regex **parser, interpreter \& visualizer** for an expressive regular language (subset of `POSIX`):  
+
     ```
-    r1,r2 ::= ε | a | . | r1* | r1+ | r1r2 
+    r1,r2 ::=
+        ε | a | . | r1* | r1+ | r? | (r1 | r2) | r1r2 
     ```
+
     - I.e. empty string, *alphanumeric* literals, `.` (any such literal),
       Kleene$\ast$, one-or-more ($+$), concatenation
 - Matches input text on regex in a *repl* (CLI programme)
