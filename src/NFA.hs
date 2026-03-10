@@ -17,6 +17,9 @@ data Env = Env
     { transitions :: NFATransitions
     , stateCount  :: Int }
 
+fromRegex :: Regex -> NFA
+fromRegex reg = S.evalState (compileNFA reg) emptyEnv
+
 emptyEnv :: Env
 emptyEnv = Env
     { transitions = DMap.empty (DMap.empty [])
@@ -27,9 +30,6 @@ compileNFA reg = do
     (start, end) <- constructNFA reg
     ts <- S.gets transitions
     return $ NFA start end ts
-
-fromRegex :: Regex -> NFA
-fromRegex reg = fst $ S.runState (compileNFA reg) emptyEnv
 
 eps :: Char
 eps = '\949'
@@ -98,7 +98,7 @@ constructNFA (Concat l r) = do
 
     return (lStart, rEnd)
 
-constructNFA (Or l r ) = do 
+constructNFA (Or l r) = do
     currentState <- getNextState
     -- first regex
     (lStart, lEnd) <- constructNFA l

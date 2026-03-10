@@ -9,6 +9,8 @@ module Datatypes
     , NFATransitions
     , DFATransitions
     , PowerSetDFATransitions
+    -- * etc.
+    , specialChrs
     ) where
 
 import Debug.Trace (trace)
@@ -158,10 +160,25 @@ stringifyNFA (NFA start end ts) =
 -- | Shared helpers
 
 formatChar :: Char -> String
-formatChar '.' = "\8226"
 formatChar ':' = "\":\""
 formatChar '/' = "\"/\""
-formatChar l   = [l]
+formatChar c | c `elem` specialChrs = ['\"',c,'\"'] -- quote-espace
+             | otherwise            = [c]
+
+specialChrs :: String
+specialChrs =
+    [ '.'
+    , '*'
+    , '+'
+    , '*'
+    , '?'
+    , '('
+    , ')'
+    , '['
+    , ']'
+    , '\\'
+    , '^'
+    , '$' ]
 
 indent :: String -> String
 indent xs = if null xs then "" else "\t" ++ xs
