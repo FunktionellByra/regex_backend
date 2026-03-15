@@ -12,8 +12,12 @@ main :: IO ()
 main = do
   quickCheck prop_rgx_positive
   quickCheck prop_rgx_negativish
-  quickCheck prop_neutral_element_negative
-  quickCheck prop_neutral_element_positive
+
+  quickCheck prop_neutral_element_concat
+  quickCheck prop_associative_concat
+
+  quickCheck prop_commutative_or
+  quickCheck prop_associative_or
 {-
 Idea:
 
@@ -124,16 +128,24 @@ prop_rgx_negativish r input = let
   haskellRegex = createRgx r
   in match r input == fullMatch input haskellRegex
 
-prop_neutral_element_positive :: Regex ->  Bool
-prop_neutral_element_positive r = let 
-  perfectMatch = createMatch r
-  in match r perfectMatch == match (Concat eps r) perfectMatch && 
-     match r perfectMatch == match (Concat r eps) perfectMatch
+-- * Monoidal properties
 
-prop_neutral_element_negative :: Regex -> String -> Bool
-prop_neutral_element_negative r input = let 
-  in match r input == match (Concat eps r) input && 
-     match r input == match (Concat r eps) input
+prop_neutral_element_concat :: Regex -> String -> Bool
+prop_neutral_element_concat r input =
+  match r input == match (Concat eps r) input && 
+  match r input == match (Concat r eps) input
+
+prop_associative_concat :: Regex -> Regex -> Regex -> String -> Bool
+prop_associative_concat r1 r2 r3 input =
+  match (Concat r1 (Concat r2 r3)) input == match (Concat (Concat r1 r2) r3) input
+
+prop_commutative_or :: Regex -> Regex -> String -> Bool
+prop_commutative_or r1 r2 input = 
+  match (Or r2 r1) input == match (Or r1 r2) input
+
+prop_associative_or :: Regex -> Regex -> Regex -> String -> Bool
+prop_associative_or r1 r2 r3 input =
+  match (Or r1 (Or r2 r3)) input == match (Or (Or r1 r2) r3) input
 
 fullMatch :: String -> String -> Bool
 fullMatch input pattern =

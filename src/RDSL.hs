@@ -71,6 +71,7 @@ pp (Kleene r)     = "(" ++ pp r ++ ")*"
 pp (Optional r)   = "(" ++ pp r ++ ")?"
 pp (Concat a b)   = pp a ++ pp b
 pp (Or a b)       = "(" ++ pp a ++ "|" ++ pp b ++ ")"
+pp (Class s)      = "[" ++ s ++ "]"
 
 -- | Matches the empty string.
 eps :: Regex
