@@ -1,22 +1,24 @@
--- | A stand-alone testing module for Regex parser. 
+-- | A stand-alone testing module for Regex.
 
 module Main where
 
-import Parser            (Regex(..),eps)
-import Regex           (match, match1)
+import Test.QuickCheck
+import Parser          (Regex(..),eps)
+import Regex           (match)
 import Data.List       (nub,sort)
 import Text.Regex.TDFA ((=~))
 import Debug.Trace     (trace)
-
-import Test.QuickCheck
 
 main :: IO ()
 main = do
   quickCheck prop_rgx_positive
   quickCheck prop_rgx_negativish
 
-  -- quickCheck prop_neutral_element_negative
-  -- quickCheck prop_neutral_element_positive
+  quickCheck prop_neutral_element_concat
+  quickCheck prop_associative_concat
+
+  quickCheck prop_commutative_or
+  quickCheck prop_associative_or
 {-
 Idea:
 
@@ -86,27 +88,29 @@ instance Arbitrary Regex where
 
 createRgx r = "^" ++ createRegex r ++ "$"
 
+-- | Creates a `regex-tdfa`-like regular expression that semantically matches 
+--  the @Regex@-input.
 createRegex :: Regex -> String
 createRegex Dot            = "\\."
 createRegex (Literal '\0') = "()"
 createRegex (Literal l)    = escape l
   where
     escape :: Char -> String
-    escape c     = if c `elem` specialChars then "\\" ++ [c] else [c]
-    specialChars = [
-        '.'
-      , '*'
-      , '+'
-      , '*'
-      , '?'
-      , '('
-      , ')'
-      , '['
-      , ']'
-      , '\\'
-      , '^'
-      , '$'
-      ]
+    escape c = if c `elem` specialChars then "\\" ++ [c] else [c]
+    specialChars =
+            [ '.'
+            , '*'
+            , '+'
+            , '*'
+            , '?'
+            , '('
+            , ')'
+            , '['
+            , ']'
+            , '\\'
+            , '^'
+            , '$' ]
+  
 createRegex (Plus r)     = "(" ++ createRegex r ++ ")+"
 createRegex (Kleene r)   = "(" ++ createRegex r ++ ")*"
 createRegex (Optional r) = "(" ++ createRegex r ++ ")?"
@@ -115,17 +119,15 @@ createRegex (Or a b)     = "(" ++ createRegex a ++ "|" ++ createRegex b ++ ")"
 createRegex (Class [])   = "[" ++ createRegex eps ++ "]"
 createRegex (Class xs)   = "[" ++ xs ++ "]"
 
--- TODO: use QuickCheck to randomly populate constructors instead of using
--- minimal implementations.
+-- | Creates a string that will definitely match the given @Regex@. 
 createMatch :: Regex -> String
--- createMatch Epsilon      = ""
 createMatch Dot          = "a"
 createMatch (Literal c)  = [c]
 createMatch (Plus r)     = createMatch r -- minimal r+
 createMatch (Kleene r)   = ""            -- minimal r*
 createMatch (Optional r) = ""            -- minimal r?
 createMatch (Concat a b) = createMatch a ++ createMatch b
-createMatch (Or a _)     = createMatch a -- bias on `a`
+createMatch (Or a _)     = createMatch a -- bias on @a@
 createMatch (Class [])   = ""
 createMatch (Class xs)   = (createMatch . Literal . head) xs
 
@@ -133,24 +135,31 @@ prop_rgx_positive :: Regex -> Bool
 prop_rgx_positive r = let 
   haskellRegex = createRgx r
   perfectMatch = createMatch r
-  in match1 r perfectMatch == fullMatch perfectMatch haskellRegex
+  in match r perfectMatch == fullMatch perfectMatch haskellRegex
 
--- TODO: create more meaningful input strings => the input is meaningful even if its not human-readable
 prop_rgx_negativish :: Regex -> String -> Bool
 prop_rgx_negativish r input = let 
   haskellRegex = createRgx r
-  in match1 r input == fullMatch input haskellRegex
+  in match r input == fullMatch input haskellRegex
 
-prop_neutral_element_positive :: Regex ->  Bool
-prop_neutral_element_positive r = let 
-  perfectMatch = createMatch r
-  in match1 r perfectMatch == match1 (Concat eps r) perfectMatch && 
-     match1 r perfectMatch == match1 (Concat r eps) perfectMatch
+-- * Monoidal properties
 
-prop_neutral_element_negative :: Regex -> String -> Bool
-prop_neutral_element_negative r input = let 
-  in match1 r input == match1 (Concat eps r) input && 
-     match1 r input == match1 (Concat r eps) input
+prop_neutral_element_concat :: Regex -> String -> Bool
+prop_neutral_element_concat r input =
+  match r input == match (Concat eps r) input && 
+  match r input == match (Concat r eps) input
+
+prop_associative_concat :: Regex -> Regex -> Regex -> String -> Bool
+prop_associative_concat r1 r2 r3 input =
+  match (Concat r1 (Concat r2 r3)) input == match (Concat (Concat r1 r2) r3) input
+
+prop_commutative_or :: Regex -> Regex -> String -> Bool
+prop_commutative_or r1 r2 input = 
+  match (Or r2 r1) input == match (Or r1 r2) input
+
+prop_associative_or :: Regex -> Regex -> Regex -> String -> Bool
+prop_associative_or r1 r2 r3 input =
+  match (Or r1 (Or r2 r3)) input == match (Or (Or r1 r2) r3) input
 
 fullMatch :: String -> String -> Bool
 fullMatch input pattern =

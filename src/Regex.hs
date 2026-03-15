@@ -1,37 +1,41 @@
 module Regex
-    ( match           -- * regex (string) on string input
-    , match1          -- * regex (datatype) on string input
-    , check           -- * internal
-    , checkWithTrace  -- * internal (trace for visuals)
-    , RegPattern      -- * alias for Stringified reg. patterns
+    ( match           -- * AST regex on string input
+    , match1          -- * (string) regex on string input
+    , matchWithTrace  -- * (string) regex on string input with trace
+    , checkWithTrace  -- * regex (DFA) on string input with trace (internal)
     ) where
 
 import Datatypes
 import qualified DFA (fromNFAMulti, flattenToDFA, fromNFA)
 import qualified NFA (epsilonClosure, fromRegex)
-import Debug.Trace (trace)
-import Text.ParserCombinators.Parsec(ParseError)
+import Text.ParserCombinators.Parsec (ParseError)
 
 import qualified DMap
-import qualified Parser as P -- TODO
+import qualified Parser as P
 import qualified Data.Map as Map
 import qualified Control.Monad.State as S
 
-type RegPattern = String
+type RegPattern     = String
+type MatchWithTrace = (Bool,[(State, Bool)])
 
--- Match a (stringified) Regex against a string input
-match :: RegPattern -> String -> Either ParseError (Bool, [(State, Bool)])
-match p s = case P.parseRegex p of
+-- Match a (stringified) Regex against a string
+match1 :: RegPattern -> String -> Either ParseError Bool
+match1 p s = case P.parseRegex p of
+    Right reg -> Right $ match reg s
+    Left e -> Left e
+
+-- Match a (stringified) Regex against a string input with trace
+matchWithTrace :: RegPattern -> String -> Either ParseError MatchWithTrace
+matchWithTrace p s = case P.parseRegex p of
     Right reg -> Right $ match2 reg s
     Left e -> Left e
 
 -- Match a Regex datatype against a string input
-match1 :: P.Regex -> String -> Bool
-match1 pattern input = let dfa = (DFA.fromNFA . NFA.fromRegex) pattern in 
+match :: P.Regex -> String -> Bool
+match pattern input = let dfa = (DFA.fromNFA . NFA.fromRegex) pattern in 
     check dfa input
 
--- Match a Regex datatype against a string input
-match2 :: P.Regex -> String -> (Bool, [(State, Bool)])
+match2 :: P.Regex -> String -> MatchWithTrace
 match2 pattern input = let dfa = (DFA.fromNFA . NFA.fromRegex) pattern in 
     checkWithTrace dfa input
 
@@ -49,24 +53,18 @@ check dfa@(DFA start accepts ts) = go start
                     Nothing        -> False
                     Just nextState -> go nextState cs
 
-type TraversalTrace =
-    ( Bool             -- * flag when in accepting state
-    , [(State, Bool)]) -- * labeling (faulty/valid) for each state
-
 -- Works the same as @check@, but at each step of the traversal marks the state.
--- This is useful for visualising the traversal step-by-step.
-checkWithTrace :: DFA -> String -> (Bool, [(State, Bool)]) 
+checkWithTrace :: DFA -> String -> MatchWithTrace
 checkWithTrace dfa@(DFA start accepts ts) input =
     let (matched, state) = S.runState (go start input) (False, []) in
         (matched, reverse $ snd state)
     where
-        go :: State -> String -> S.State TraversalTrace Bool
+        go :: State -> String -> S.State MatchWithTrace Bool
         go current []     = do
             let isAccepting = current `elem` accepts
             -- The current state verifies the input, thus set the FoundFlag to True
             -- to avoid adding further trace
             S.modify (\(_, trace) -> if isAccepting then (True,(current,True):trace) else (False,(current,False):trace))
-            trace ("Accept states: " ++ show accepts) (return ())
             return isAccepting
         go current (c:cs) = do
             let literalsForCurrent = Map.keys $ DMap.lookup current ts
@@ -76,12 +74,11 @@ checkWithTrace dfa@(DFA start accepts ts) input =
                 if '.' `elem` literalsForCurrent then ['.', c] else [c]
             return $ or matched
             where 
-                proceedWithChar :: Char -> S.State TraversalTrace Bool
+                proceedWithChar :: Char -> S.State MatchWithTrace Bool
                 proceedWithChar c = case Map.lookup c $ DMap.lookup current ts of
                     Nothing        -> do
                         -- Add the current state as 'faulty', retain the found flag
                         S.modify (\s@(found, trace) -> if found then s else (False,(current,False):trace))
-                        trace ("no transition found, false") (return ())
                         return False
                     Just nextState -> do
                         -- Add the current state as valid on the verification path, retain the found flag

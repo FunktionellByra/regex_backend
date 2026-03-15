@@ -4,7 +4,6 @@
 module Main where
 
 import Regex
-import Parser
 import Datatypes
 import Parser
 import Web.Scotty

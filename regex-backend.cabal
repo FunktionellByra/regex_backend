@@ -39,9 +39,6 @@ executable server
 
   default-language:  Haskell2010
 
-
--- same as before...
-
 executable test
   main-is:           Testing.hs
   hs-source-dirs:    test
