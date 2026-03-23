@@ -30,13 +30,14 @@ type ValidState  = Bool
 type Input       = String
 
 data Response = Response 
-    { graphviz :: String
+    { graphvizNFA :: String
+    , graphvizDFA :: String
     , matched  :: MatchStatus
     , trace    :: [(State,ValidState)] }
 
 instance ToJSON Response where
-    toJSON(Response{graphviz=g,matched=m,trace=t}) =
-        object ["graphviz" .= g, "matched" .= m, "trace" .= t]
+    toJSON(Response{graphvizNFA=g1,graphvizDFA=g2,matched=m,trace=t}) =
+        object ["graphvizNFA" .= g1, "graphvizDFA" .= g2, "matched" .= m, "trace" .= t]
 
 corsPolicy :: CorsResourcePolicy
 corsPolicy = CorsResourcePolicy
@@ -69,7 +70,8 @@ processRequest (Request{regexp=reg,input=i}) = do
                 dfa          = flattenToDFA powerSetDFA
                 (matched,tr) = checkWithTrace dfa i
                 res = Response
-                    { graphviz = show dfa
+                    { graphvizNFA = show nfa
+                    , graphvizDFA = show dfa
                     , matched  = matched
                     , trace    = tr }
             json res
