@@ -15,7 +15,6 @@ import DMap                 (toString)
 import NFA                  (epsilonClosure,fromRegex)
 import DFA                  (fromNFAMulti,flattenToDFA)
 import Network.HTTP.Types   (hContentType,status400)
-import qualified Debug.Trace as D
 
 data Request = Request { regexp :: String,input :: String }
 
@@ -33,7 +32,7 @@ data Response = Response
     { graphvizNFA :: String
     , graphvizDFA :: String
     , matched  :: MatchStatus
-    , trace    :: [(State,ValidState)] }
+    , trace    :: [(String, State,ValidState)] }
 
 instance ToJSON Response where
     toJSON(Response{graphvizNFA=g1,graphvizDFA=g2,matched=m,trace=t}) =
