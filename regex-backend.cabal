@@ -35,6 +35,8 @@ executable server
                , text
                , aeson
                , wai-cors
+               , bytestring
+               , wai
                , http-types
 
   default-language:  Haskell2010

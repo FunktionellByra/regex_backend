@@ -9,12 +9,14 @@ import Parser
 import Web.Scotty
 import Data.Aeson
 import Network.Wai.Middleware.Cors
+import qualified Data.ByteString.Char8 as BS
 
-import Data.Text.Lazy as TL (pack)
-import DMap                 (toString)
-import NFA                  (epsilonClosure,fromRegex)
-import DFA                  (fromNFAMulti,flattenToDFA)
-import Network.HTTP.Types   (hContentType,status400)
+import Data.Text.Lazy as TL       (pack)
+import DMap                       (toString)
+import NFA                        (epsilonClosure,fromRegex)
+import DFA                        (fromNFAMulti,flattenToDFA)
+import Network.HTTP.Types         (hContentType,status400)
+import qualified Network.Wai as W (Request,requestHeaders)
 
 data Request = Request { regexp :: String,input :: String }
 
@@ -38,26 +40,38 @@ instance ToJSON Response where
     toJSON(Response{graphvizNFA=g1,graphvizDFA=g2,matched=m,trace=t}) =
         object ["graphvizNFA" .= g1, "graphvizDFA" .= g2, "matched" .= m, "trace" .= t]
 
-corsPolicy :: CorsResourcePolicy
-corsPolicy = CorsResourcePolicy
-    { corsOrigins        = Nothing
-    , corsMethods        = ["GET", "POST", "DELETE", "OPTIONS"]
-    , corsRequestHeaders = [hContentType, "Authorization", "X-Requested-With"]
+isAllowedOrigin :: BS.ByteString -> Bool
+isAllowedOrigin origin = origin ==
+    "https://funktionellbyra.github.io"        ||
+    "http://localhost:" `BS.isPrefixOf` origin ||
+    "http://127.0.0.1:" `BS.isPrefixOf` origin
+
+corsPolicy :: BS.ByteString -> CorsResourcePolicy
+corsPolicy origin = CorsResourcePolicy
+    { corsOrigins        = Just ([origin], False)
+    , corsMethods        = ["GET","POST"]
+    , corsRequestHeaders = [hContentType,"Authorization","X-Requested-With"]
     , corsExposedHeaders = Nothing
     , corsMaxAge         = Nothing
-    , corsVaryOrigin     = False
-    , corsRequireOrigin  = False
+    , corsVaryOrigin     = True
+    , corsRequireOrigin  = True
     , corsIgnoreFailures = False }
+
+getCorsPolicy :: W.Request -> Maybe CorsResourcePolicy
+getCorsPolicy req =
+  case lookup "origin" (W.requestHeaders req) of
+    Just origin | isAllowedOrigin origin -> Just (corsPolicy origin)
+    _ -> Nothing
 
 main :: IO ()
 main = do
-    scotty 8080 $ do
-        middleware $ cors (const $ Just corsPolicy)
-        get "/" $ text "Welcome to our Regex-Visualizer!"
-        post  "/" $ do
-            req <- jsonData
-            processRequest req
-        notFound $ text "404: Page not found."
+  scotty 8080 $ do
+    middleware $ cors getCorsPolicy
+    get "/" $ text "Welcome to our Regex-Visualizer!"
+    post  "/" $ do
+        req <- jsonData
+        processRequest req
+    notFound $ text "404: Page not found."
     
 processRequest :: Request -> ActionM () -- Response
 processRequest (Request{regexp=reg,input=i}) = do
