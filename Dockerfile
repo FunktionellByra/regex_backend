@@ -1,4 +1,4 @@
-FROM haskell:9.10.3 AS builder
+FROM haskell:9.10.3 
 
 WORKDIR /app
 

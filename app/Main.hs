@@ -10,6 +10,7 @@ import Web.Scotty
 import Data.Aeson
 import Network.Wai.Middleware.Cors
 import qualified Data.ByteString.Char8 as BS
+import Network.Wai.Handler.Warp (setHost, setPort, defaultSettings)
 
 import Data.Text.Lazy as TL       (pack)
 import DMap                       (toString)
@@ -65,13 +66,15 @@ getCorsPolicy req =
 
 main :: IO ()
 main = do
-  scotty 8080 $ do
-    middleware $ cors getCorsPolicy
-    get "/" $ text "Welcome to our Regex-Visualizer!"
-    post  "/" $ do
-        req <- jsonData
-        processRequest req
-    notFound $ text "404: Page not found."
+    -- host on 0.0.0.0 to expose it to network on server, non-verbose mode
+    let opts = Options 0 (setPort 8080 $ setHost "0.0.0.0" $ defaultSettings) False
+    scottyOpts opts $ do
+        middleware $ cors getCorsPolicy
+        get "/" $ text "Welcome to our Regex-Visualizer!"
+        post  "/" $ do
+            req <- jsonData
+            processRequest req
+        notFound $ text "404: Page not found."
     
 processRequest :: Request -> ActionM () -- Response
 processRequest (Request{regexp=reg,input=i}) = do
